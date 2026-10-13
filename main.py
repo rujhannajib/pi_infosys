@@ -10,8 +10,9 @@ from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 import os
+from battery import start_battery_monitor, get_battery_data
 
-PORT = 4000
+PORT = 5000
 app = Flask(__name__)
 
 load_dotenv()
@@ -170,6 +171,13 @@ def generate_camera_stream():
 
         time.sleep(0.1)
 
+@app.route("/api/battery")
+@auth.login_required
+def battery():
+    data = get_battery_data()
+    if data["timestamp"] == 0:
+        return jsonify({"error": data["error"] or "no reading yet"}), 503
+    return jsonify(data)
         
 @app.route("/video")
 def video_feed():
@@ -185,6 +193,6 @@ def index():
 
 if __name__ == "__main__":
     threading.Thread(target=speedtest_scheduler, daemon=True).start()
-    # threading.Thread(target=camera_capture, daemon=True).start()
-    # 4000 for testing, 5000 for server
+    threading.Thread(target=camera_capture, daemon=True).start()
+    start_battery_monitor()
     app.run(host="0.0.0.0", port=PORT, threaded=True)
